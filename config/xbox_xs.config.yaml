@@ -1,0 +1,53 @@
+teleop_twist_joy_node:
+  ros__parameters:
+    # Axis Mappings
+    # Left Stick Up/Down -> Linear Velocity (Forward/Backward)
+    axis_linear:
+      x: 1
+    scale_linear:
+      x: -0.5       # Invert axis so UP is positive, and scale to 50% speed
+    scale_linear_turbo:
+      x: -1.0       # Invert axis and use 100% speed for turbo
+
+    # Left Stick Left/Right -> Angular Velocity (Turning)
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: -0.8     # Invert axis so RIGHT is a negative rotation, scale to 80%
+    scale_angular_turbo:
+      yaw: -1.5     # Invert and allow for faster turning in turbo mode
+
+    # Button Mappings
+    # Use Left Bumper as the "dead man's switch"
+    enable_button: 9        # Left Bumper (LB)
+    # Use Right Bumper for "turbo" mode
+    enable_turbo_button: 10 # Right Bumper (RB)
+
+# Xbox XS Controller Button/Axis Reference:
+# ==========================================
+# 
+# Axes:
+#   axes[0] -> Left Thumbstick (horizontal)
+#   axes[1] -> Left Thumbstick (vertical)
+#   axes[2] -> Right Thumbstick (horizontal)
+#   axes[3] -> Right Thumbstick (vertical)
+#   axes[4] -> Left Trigger (LT)
+#   axes[5] -> Right Trigger (RT)
+#
+# Buttons:
+#   button 0  -> A
+#   button 1  -> B
+#   button 2  -> X
+#   button 3  -> Y
+#   button 4  -> Double window/rectangle button
+#   button 5  -> Xbox button
+#   button 6  -> 3 horizontal lines button
+#   button 7  -> Left joystick press
+#   button 8  -> Right joystick press
+#   button 9  -> L bumper
+#   button 10 -> R bumper
+#   button 11 -> Up arrow
+#   button 12 -> Down arrow
+#   button 13 -> Left arrow
+#   button 14 -> Right arrow
+#   button 15 -> Share button

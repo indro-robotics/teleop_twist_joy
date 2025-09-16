@@ -5,17 +5,17 @@ teleop_twist_joy_node:
     axis_linear:
       x: 1
     scale_linear:
-      x: -0.5       # Invert axis so UP is positive, and scale to 50% speed
+      x: 0.3       # Invert axis so UP is positive, and scale to 50% speed
     scale_linear_turbo:
-      x: -1.0       # Invert axis and use 100% speed for turbo
+      x: 1.0       # Invert axis and use 100% speed for turbo
 
     # Left Stick Left/Right -> Angular Velocity (Turning)
     axis_angular:
       yaw: 0
     scale_angular:
-      yaw: -0.8     # Invert axis so RIGHT is a negative rotation, scale to 80%
+      yaw: 0.4     # Invert axis so RIGHT is a negative rotation, scale to 80%
     scale_angular_turbo:
-      yaw: -1.5     # Invert and allow for faster turning in turbo mode
+      yaw: 1.0     # Invert and allow for faster turning in turbo mode
 
     # Button Mappings
     # Use Left Bumper as the "dead man's switch"

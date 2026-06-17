@@ -14,10 +14,10 @@ def generate_launch_description():
     use_joy_node = launch.substitutions.LaunchConfiguration('use_joy_node')
 
     return launch.LaunchDescription([
-        launch.actions.DeclareLaunchArgument('joy_vel', default_value='mux/cmd_vel'),
-        launch.actions.DeclareLaunchArgument('joy_config', default_value='xbox'),
+        launch.actions.DeclareLaunchArgument('joy_vel', default_value='/fort/vel'),
+        launch.actions.DeclareLaunchArgument('joy_config', default_value='ps3'),
         launch.actions.DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
-        launch.actions.DeclareLaunchArgument('use_joy_node', default_value='false',
+        launch.actions.DeclareLaunchArgument('use_joy_node', default_value='true',
             description='Whether to launch the joy_node locally (true) or use remote joy_node (false)'),
         launch.actions.DeclareLaunchArgument('config_filepath', default_value=[
             launch.substitutions.TextSubstitution(text=os.path.join(
@@ -33,6 +33,7 @@ def generate_launch_description():
                     'deadzone': 0.3,
                     'autorepeat_rate': 20.0,
                 }],
+                remappings=[('joy', '/fort/joy')]
                 ),
         ], condition=launch.conditions.IfCondition(use_joy_node)),
         
@@ -40,6 +41,6 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='teleop_twist_joy', executable='teleop_node',
             name='teleop_twist_joy_node', parameters=[config_filepath],
-            remappings={('cmd_vel', launch.substitutions.LaunchConfiguration('joy_vel'))},
+            remappings={('/fort/vel', launch.substitutions.LaunchConfiguration('joy_vel'))},
             ),
     ])

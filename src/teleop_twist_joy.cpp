@@ -76,8 +76,8 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 {
   pimpl_ = new Impl;
 
-  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
-  pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>("joy", rclcpp::QoS(10),
+  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>("fort/vel", 10);
+  pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>("fort/joy", rclcpp::QoS(10),
     std::bind(&TeleopTwistJoy::Impl::joyCallback, this->pimpl_, std::placeholders::_1));
 
   pimpl_->require_enable_button = this->declare_parameter("require_enable_button", true);
@@ -328,20 +328,30 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 {
  // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
-//  added this to make a range for the motion
-  double linear_x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
-    if (linear_x > -0.1 && linear_x < 0.1) linear_x = 0;
+  //  added this to make a range for the motion
+  // linear_x represents FORT THROTTLE
+  double linear_x = -1 * joy_msg->axes[5]; // getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
+  if (linear_x > -0.1 && linear_x < 0.1) linear_x = 0;
+  if (linear_x < 0) linear_x = 0;
 
+  // linear_z represents FORT BRAKING
+  double linear_z = -1 * joy_msg->axes[2];
+  if (linear_z > -0.1 && linear_z < 0.1) linear_z = 0;
+  if (linear_z < 0) linear_z = 0;
 
-  double angular_z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
-    if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
+  double angular_z = joy_msg->axes[3]; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
+  if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
+
+  double linear_y = joy_msg->axes[0];
+  if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
+
 // 
   cmd_vel_msg->linear.x = linear_x;  //chnaged
-  cmd_vel_msg->linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
-  cmd_vel_msg->linear.z = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
+  cmd_vel_msg->linear.y = linear_y; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
+  cmd_vel_msg->linear.z = linear_z; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
   cmd_vel_msg->angular.z = angular_z;  //chnaged 
-  cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
-  cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
+  cmd_vel_msg->angular.y = 0; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
+  cmd_vel_msg->angular.x = 0; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
 
   cmd_vel_pub->publish(std::move(cmd_vel_msg));
   sent_disable_msg = false;
@@ -349,19 +359,36 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 {
-  if (enable_turbo_button >= 0 &&
-      static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
-      joy_msg->buttons[enable_turbo_button])
-  {
-    sendCmdVelMsg(joy_msg, "turbo");
+  // if (enable_turbo_button >= 0 &&
+  //     static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
+  //     joy_msg->buttons[enable_turbo_button])
+  // {
+  //   sendCmdVelMsg(joy_msg, "turbo");
+  // }
+  // else if (!require_enable_button ||
+	//    (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
+  //          joy_msg->buttons[enable_button]))
+  // {
+  //   sendCmdVelMsg(joy_msg, "normal");
+  // }
+  bool any_axes_moved = false;
+
+  for(int i = 0; i < int(joy_msg->axes.size()); i++) {
+    if (joy_msg->axes[i] != 0) {
+      any_axes_moved = true;
+    }
   }
-  else if (!require_enable_button ||
-	   (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
-           joy_msg->buttons[enable_button]))
-  {
+
+  if (!joy_msg->buttons[enable_button]) { // && any_axes_moved){
+    // RCLCPP_INFO(non_node_logger, "CURRENT STATUS: %d", joy_msg->buttons[enable_button]);
     sendCmdVelMsg(joy_msg, "normal");
-  }
-  else
+
+  // } else if (any_axes_moved)
+  // {
+  //   sendCmdVelMsg(joy_msg, "normal");
+  // }
+  
+  } else
   {
     // When enable button is released, immediately send a single no-motion command
     // in order to stop the robot.

@@ -329,16 +329,20 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
  // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
 //  added this to make a range for the motion
-  double linear_x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
+  // linear_x represents THROTTLE
+  double linear_x = joy_msg->axes[5]; // getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
     if (linear_x > -0.1 && linear_x < 0.1) linear_x = 0;
 
+  // linear_z represents BRAKING
+  double linear_z = joy_msg->axes[4];
+  if (linear_z > -0.1 && linear_z < 0.1) linear_z = 0;
 
   double angular_z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
     if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
 // 
   cmd_vel_msg->linear.x = linear_x;  //chnaged
   cmd_vel_msg->linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
-  cmd_vel_msg->linear.z = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
+  cmd_vel_msg->linear.z = linear_z; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
   cmd_vel_msg->angular.z = angular_z;  //chnaged 
   cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
   cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");

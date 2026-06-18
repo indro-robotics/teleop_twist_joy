@@ -365,7 +365,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     RCLCPP_INFO(test_condition, "NOT USING FORT");
     throttle = 5;
     brake = 4;
-    mult = -1;
+    mult = 1;
 
     angular_z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
     if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;

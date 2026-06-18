@@ -10,12 +10,14 @@ import launch_ros.actions
 def generate_launch_description():
     joy_config = launch.substitutions.LaunchConfiguration('joy_config')
     joy_dev = launch.substitutions.LaunchConfiguration('joy_dev')
+    joy_topic = launch.substitutions.LaunchConfiguration('joy_topic')
     config_filepath = launch.substitutions.LaunchConfiguration('config_filepath')
     use_joy_node = launch.substitutions.LaunchConfiguration('use_joy_node')
 
     return launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument('joy_vel', default_value='/fort/vel'),
-        launch.actions.DeclareLaunchArgument('joy_config', default_value='ps3'),
+        launch.actions.DeclareLaunchArgument('joy_topic', default_value='/joy'),
+        launch.actions.DeclareLaunchArgument('joy_config', default_value='xbox'),
         launch.actions.DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
         launch.actions.DeclareLaunchArgument('use_joy_node', default_value='true',
             description='Whether to launch the joy_node locally (true) or use remote joy_node (false)'),
@@ -33,7 +35,7 @@ def generate_launch_description():
                     'deadzone': 0.3,
                     'autorepeat_rate': 20.0,
                 }],
-                remappings=[('joy', '/fort/joy')]
+                remappings=[('joy', joy_topic)]
                 ),
         ], condition=launch.conditions.IfCondition(use_joy_node)),
         

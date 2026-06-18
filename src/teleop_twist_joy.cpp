@@ -57,6 +57,7 @@ struct TeleopTwistJoy::Impl
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub;
 
   bool require_enable_button;
+  bool use_fort;
   int64_t enable_button;
   int64_t enable_turbo_button;
 
@@ -74,17 +75,18 @@ struct TeleopTwistJoy::Impl
  */
 TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleop_twist_joy_node", options)
 {
+  std::string joy_topic = "joy";
+  std::string vel_topic = "cmd_vel";
+  
   pimpl_ = new Impl;
-
-  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>("fort/vel", 10);
-  pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>("fort/joy", rclcpp::QoS(10),
-    std::bind(&TeleopTwistJoy::Impl::joyCallback, this->pimpl_, std::placeholders::_1));
 
   pimpl_->require_enable_button = this->declare_parameter("require_enable_button", true);
 
   pimpl_->enable_button = this->declare_parameter("enable_button", 5);
 
   pimpl_->enable_turbo_button = this->declare_parameter("enable_turbo_button", -1);
+
+  pimpl_->use_fort = this->declare_parameter("use_fort", false);
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
@@ -169,7 +171,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
                                                  "scale_linear_turbo.x", "scale_linear_turbo.y", "scale_linear_turbo.z",
                                                  "scale_angular.yaw", "scale_angular.pitch", "scale_angular.roll",
                                                  "scale_angular_turbo.yaw", "scale_angular_turbo.pitch", "scale_angular_turbo.roll"};
-    static std::set<std::string> boolparams = {"require_enable_button"};
+    static std::set<std::string> boolparams = {"require_enable_button", "use_fort"};
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
 
@@ -216,6 +218,10 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
       if (parameter.get_name() == "require_enable_button")
       {
         this->pimpl_->require_enable_button = parameter.get_value<rclcpp::PARAMETER_BOOL>();
+      }
+      if (parameter.get_name() == "use_fort")
+      {
+        this->pimpl_->use_fort = parameter.get_value<rclcpp::PARAMETER_BOOL>();
       }
       if (parameter.get_name() == "enable_button")
       {
@@ -302,6 +308,19 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   };
 
   callback_handle = this->add_on_set_parameters_callback(param_callback);
+
+  if(pimpl_->use_fort) {
+    joy_topic = "fort/joy";
+    vel_topic = "fort/vel";
+  } else {
+    joy_topic = "joy";
+    vel_topic = "/mux/cmd_vel";
+  }
+
+  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>(vel_topic, 10);
+  pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>(joy_topic, rclcpp::QoS(10),
+  std::bind(&TeleopTwistJoy::Impl::joyCallback, this->pimpl_, std::placeholders::_1));
+
 }
 
 TeleopTwistJoy::~TeleopTwistJoy()
@@ -326,32 +345,51 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
 void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr joy_msg,
                                          const std::string& which_map)
 {
+  int throttle, brake, mult;
+  double angular_z, linear_y;
+
+  if(use_fort) {
+    // configuration for fort controller
+    throttle = 5;
+    brake = 2;
+    mult = -1;
+
+    angular_z = joy_msg->axes[3];
+    if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
+
+    linear_y = joy_msg->axes[0];
+    if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
+
+  } else {
+    throttle = 5;
+    brake = 4;
+    mult = -1;
+
+    angular_z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
+    if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
+
+    linear_y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
+    if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
+  }
+
  // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
   //  added this to make a range for the motion
-  // linear_x represents FORT THROTTLE
-  double linear_x = -1 * joy_msg->axes[5]; // getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
+  double linear_x = mult * joy_msg->axes[throttle];
   if (linear_x > -0.1 && linear_x < 0.1) linear_x = 0;
-  if (linear_x < 0) linear_x = 0;
+  if ((linear_x < 0)) linear_x = 0;
 
   // linear_z represents FORT BRAKING
-  double linear_z = -1 * joy_msg->axes[2];
+  double linear_z = mult * joy_msg->axes[brake];
   if (linear_z > -0.1 && linear_z < 0.1) linear_z = 0;
-  if (linear_z < 0) linear_z = 0;
+  if ((linear_z < 0)) linear_z = 0;
 
-  double angular_z = joy_msg->axes[3]; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
-  if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
-
-  double linear_y = joy_msg->axes[0];
-  if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
-
-// 
-  cmd_vel_msg->linear.x = linear_x;  //chnaged
-  cmd_vel_msg->linear.y = linear_y; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
-  cmd_vel_msg->linear.z = linear_z; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
+  cmd_vel_msg->linear.x = linear_x;
+  cmd_vel_msg->linear.y = linear_y;
+  cmd_vel_msg->linear.z = linear_z;
   cmd_vel_msg->angular.z = angular_z;  //chnaged 
-  cmd_vel_msg->angular.y = 0; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
-  cmd_vel_msg->angular.x = 0; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
+  cmd_vel_msg->angular.y = 0;
+  cmd_vel_msg->angular.x = 0;
 
   cmd_vel_pub->publish(std::move(cmd_vel_msg));
   sent_disable_msg = false;
@@ -359,45 +397,46 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 {
-  // if (enable_turbo_button >= 0 &&
-  //     static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
-  //     joy_msg->buttons[enable_turbo_button])
-  // {
-  //   sendCmdVelMsg(joy_msg, "turbo");
-  // }
-  // else if (!require_enable_button ||
-	//    (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
-  //          joy_msg->buttons[enable_button]))
-  // {
-  //   sendCmdVelMsg(joy_msg, "normal");
-  // }
-  bool any_axes_moved = false;
 
-  for(int i = 0; i < int(joy_msg->axes.size()); i++) {
-    if (joy_msg->axes[i] != 0) {
-      any_axes_moved = true;
+  if(use_fort) { // using node for FORT SRC controller
+    if (!joy_msg->buttons[enable_button]) {
+      // enable button for fort is the ESTOP BUTTON which is 0 when controller is active, and 1 when estop is on
+      sendCmdVelMsg(joy_msg, "normal");
+
+    } else {
+      // When enable button is released, immediately send a single no-motion command
+      // in order to stop the robot.
+      if (!sent_disable_msg) {
+        // Initializes with zeros by default.
+        auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
+        cmd_vel_pub->publish(std::move(cmd_vel_msg));
+        sent_disable_msg = true;
+      }
     }
-  }
 
-  if (!joy_msg->buttons[enable_button]) { // && any_axes_moved){
-    // RCLCPP_INFO(non_node_logger, "CURRENT STATUS: %d", joy_msg->buttons[enable_button]);
-    sendCmdVelMsg(joy_msg, "normal");
-
-  // } else if (any_axes_moved)
-  // {
-  //   sendCmdVelMsg(joy_msg, "normal");
-  // }
-  
-  } else
-  {
-    // When enable button is released, immediately send a single no-motion command
-    // in order to stop the robot.
-    if (!sent_disable_msg)
+  } else {
+    if (enable_turbo_button >= 0 &&
+      static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
+      joy_msg->buttons[enable_turbo_button])
     {
-      // Initializes with zeros by default.
-      auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
-      cmd_vel_pub->publish(std::move(cmd_vel_msg));
-      sent_disable_msg = true;
+      sendCmdVelMsg(joy_msg, "turbo");
+
+    } else if (!require_enable_button ||
+      (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
+      joy_msg->buttons[enable_button]))
+    {
+      sendCmdVelMsg(joy_msg, "normal");
+
+    } else {
+      // When enable button is released, immediately send a single no-motion command
+      // in order to stop the robot.
+      if (!sent_disable_msg)
+      {
+        // Initializes with zeros by default.
+        auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
+        cmd_vel_pub->publish(std::move(cmd_vel_msg));
+        sent_disable_msg = true;
+      }
     }
   }
 }

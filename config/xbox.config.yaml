@@ -15,5 +15,6 @@ teleop_twist_joy_node:
     scale_angular:
       yaw: -0.4 # chnage it to -0.4 to make reverse the diraction of rotation 
 
+    use_fort: false
     enable_button: 4  # Left trigger button
     enable_turbo_button: 5  # Right trigger button

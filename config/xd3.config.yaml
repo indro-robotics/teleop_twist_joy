@@ -13,5 +13,6 @@ teleop_twist_joy_node:
     scale_angular:
       yaw: 0.4
 
+    use_fort: false
     enable_button: 0  # Trigger
     enable_turbo_button: 1  # Button 2 aka thumb button

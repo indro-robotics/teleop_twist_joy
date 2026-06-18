@@ -361,6 +361,8 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
 
   } else {
+    rclcpp::Logger test_condition = rclcpp::get_logger("test_condition");
+    RCLCPP_INFO(test_condition, "NOT USING FORT");
     throttle = 5;
     brake = 4;
     mult = -1;

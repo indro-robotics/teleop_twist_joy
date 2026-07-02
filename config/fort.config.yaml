@@ -1,7 +1,7 @@
 teleop_twist_joy_node:
   ros__parameters:
     axis_linear:
-      x: 1
+      x: 5
     scale_linear:
       x: 0.7
     scale_linear_turbo:

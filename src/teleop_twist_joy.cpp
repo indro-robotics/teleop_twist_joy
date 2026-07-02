@@ -345,12 +345,11 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
 void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr joy_msg,
                                          const std::string& which_map)
 {
-  int throttle, brake, mult;
+  int brake, mult;
   double angular_z, linear_y;
 
   if(use_fort) {
     // configuration for fort controller
-    throttle = 5;
     brake = 2;
     mult = -1;
 
@@ -363,25 +362,24 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   } else {
     //rclcpp::Logger test_condition = rclcpp::get_logger("test_condition");
     //RCLCPP_INFO(test_condition, "NOT USING FORT");
-    throttle = 5;
     brake = 4;
     mult = 1;
 
-    angular_z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
+    angular_z = joy_msg->axes[2]; //getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
     if (angular_z > -0.1 && angular_z < 0.1) angular_z = 0;
 
-    linear_y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
+    linear_y = joy_msg->axes[0]; //getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
     if (linear_y > -0.1 && linear_y < 0.1) linear_y = 0;
   }
 
  // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
   //  added this to make a range for the motion
-  double linear_x = mult * joy_msg->axes[throttle];
+  double linear_x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
   if (linear_x > -0.1 && linear_x < 0.1) linear_x = 0;
   if ((linear_x < 0)) linear_x = 0;
 
-  // linear_z represents FORT BRAKING
+  // linear_z represents BRAKING
   double linear_z = mult * joy_msg->axes[brake];
   if (linear_z > -0.1 && linear_z < 0.1) linear_z = 0;
   if ((linear_z < 0)) linear_z = 0;

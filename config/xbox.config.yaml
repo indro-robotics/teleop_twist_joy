@@ -1,11 +1,13 @@
 teleop_twist_joy_node:
   ros__parameters:
     axis_linear:  # Left thumb stick vertical
-      x: 1
+      x: 5
       y: 0
+      Z: 4
     scale_linear:
-      x: -0.5       # change this to -0.5 where - is to reverse the direction and 0.5 to make it slower 
-      y: -0.5
+      x: 1.5       # change this to -0.5 where - is to reverse the direction and 0.5 to make it slower 
+      y: 1.0
+      Z: 1.0
     scale_linear_turbo:
       x: -1.0
       y: -1.0
@@ -13,7 +15,9 @@ teleop_twist_joy_node:
     axis_angular:  # Left thumb stick horizontal
       yaw: 2
     scale_angular:
-      yaw: -0.4 # chnage it to -0.4 to make reverse the diraction of rotation 
+      yaw: 1.0 # chnage it to -0.4 to make reverse the diraction of rotation 
 
-    enable_button: 4  # Left trigger button
-    enable_turbo_button: 5  # Right trigger button
+    enable_button: -1  # Left trigger button
+    enable_turbo_button: -1  # Right trigger button
+
+    require_enable_button: false

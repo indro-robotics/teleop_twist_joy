@@ -14,7 +14,7 @@ def generate_launch_description():
     use_joy_node = launch.substitutions.LaunchConfiguration('use_joy_node')
 
     return launch.LaunchDescription([
-        launch.actions.DeclareLaunchArgument('joy_vel', default_value='mux/cmd_vel'),
+        launch.actions.DeclareLaunchArgument('joy_vel', default_value='mux/cmd_vel_teleop'),
         launch.actions.DeclareLaunchArgument('joy_config', default_value='xbox'),
         launch.actions.DeclareLaunchArgument('joy_dev', default_value='/dev/input/js0'),
         launch.actions.DeclareLaunchArgument('use_joy_node', default_value='false',
